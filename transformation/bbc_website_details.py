@@ -66,7 +66,7 @@ final_df=results_df.join(race_circuit_df,results_df.race_id==race_circuit_df.rac
 .join(constructors_df,constructors_df.constructor_id==results_df.constructor_id,'inner')\
 .select(races_df.race_name,races_df.race_year,races_df.race_date,circuits_df.circuit_location,\
        drivers_df.driver_name,drivers_df.driver_number,drivers_df.driver_location,constructors_df.team,\
-       results_df.grid,results_df.fastest_lap,results_df.race_time,results_df.points)\
+       results_df.grid,results_df.fastest_lap,results_df.race_time,results_df.position,results_df.points)\
 .withColumn('ingestion_date',current_timestamp())
 
 
