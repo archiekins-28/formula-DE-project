@@ -9,6 +9,16 @@
 
 # COMMAND ----------
 
+dbutils.widgets.text("p_file_date","2022-03-21")
+p_file_date=dbutils.widgets.get("p_file_date")
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_data_source","")
+p_data_source=dbutils.widgets.get("p_data_source")
+
+# COMMAND ----------
+
 from pyspark.sql.types import *
 
 # COMMAND ----------
@@ -36,7 +46,7 @@ circuit_schema=StructType(fields=[StructField("circuitId",IntegerType(),False),
 circuits_df=spark.read\
 .option("header",True)\
 .schema(circuit_schema)\
-.csv(f"{raw_path}/circuits.csv")
+.csv(f"{raw_path}/inc-raw/{p_file_date}/circuits.csv")
 
 
 # COMMAND ----------
@@ -47,7 +57,7 @@ circuits_df=spark.read\
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col,lit
 
 # COMMAND ----------
 
@@ -65,7 +75,9 @@ circuit_renamed_df=circuit_selected_df.withColumnRenamed("circuitId","circuit_id
 .withColumnRenamed("circuitRef","circuitRef")\
 .withColumnRenamed("lat","latitiude")\
 .withColumnRenamed("lng","longitude")\
-.withColumnRenamed("alt","altitude")
+.withColumnRenamed("alt","altitude")\
+.withColumn("data_source",lit(p_data_source))\
+.withColumn("file_date",lit(p_file_date))
 
 
 # COMMAND ----------
@@ -95,6 +107,18 @@ circuit_final_df.write.mode("overwrite").parquet(f"{processed_path}/processed/ci
 
 # COMMAND ----------
 
+circuit_final_df.write.format('parquet').mode("overwrite").saveAsTable('f1_processsed.circuits')
 
-df=spark.read.parquet("/mnt/formuladl28/processed/processed/circuits")
-display(df)
+# COMMAND ----------
+
+display(spark.sql('select * from f1_processsed.circuits'))
+
+# COMMAND ----------
+
+
+# df=spark.read.parquet("/mnt/formuladl28/processed/processed/circuits")
+
+
+# COMMAND ----------
+
+dbutils.notebook.exit('success')
