@@ -8,12 +8,23 @@
 
 # COMMAND ----------
 
+dbutils.widgets.text("p_data_source","")
+p_data_source=dbutils.widgets.get("p_data_source")
+
+# COMMAND ----------
+
+dbutils.widgets.text("p_file_date","2022-03-21")
+p_file_date=dbutils.widgets.get("p_file_date")
+
+# COMMAND ----------
+
 from pyspark.sql.types import *
 
 # COMMAND ----------
 
 race_schema=StructType(fields=[StructField("raceId",IntegerType(),False),
                                StructField("year",IntegerType(),True),
+                               StructField("round",IntegerType(),True),
                                StructField("circuitId",IntegerType(),True),
                                StructField("name",StringType(),True),
                                StructField("date",DateType(),True),
@@ -29,7 +40,7 @@ race_schema=StructType(fields=[StructField("raceId",IntegerType(),False),
 
 # COMMAND ----------
 
-race_df=spark.read.option("header",True).csv("/mnt/formuladl28/raw/raw/races.csv")
+race_df=spark.read.option("header",True).csv(f"{raw_path}/inc-raw/{p_file_date}/races.csv")
 
 
 # COMMAND ----------
@@ -43,7 +54,7 @@ from pyspark.sql.functions import *
 
 # COMMAND ----------
 
-selected_race_df=race_df.select(col("raceId"),col("year"),col("circuitId"),col("name"),col("date"),col("time"))
+selected_race_df=race_df.select(col("raceId"),col("year"),col("round"),col("circuitId"),col("name"),col("date"),col("time"))
 
 
 # COMMAND ----------
@@ -59,9 +70,11 @@ selected_race_df=race_df.select(col("raceId"),col("year"),col("circuitId"),col("
 
 pre_final_race_df=selected_race_df.withColumnRenamed("raceId","race_id")\
 .withColumnRenamed("year","race_year")\
-.withColumnRenamed("circuitId","circuitId")\
+.withColumnRenamed("circuitId","circuit_id")\
 .withColumn("race_timestamp",to_timestamp(concat(col('date'),lit(" "),col('time')),'yyyy-mm-dd hh:mm:ss'))\
-.withColumn("ingestion_date",current_timestamp())
+.withColumn("ingestion_date",current_timestamp())\
+.withColumn("data_source",lit(p_data_source))\
+.withColumn("file_date",lit(p_file_date))
 
 
 # COMMAND ----------
@@ -73,7 +86,7 @@ pre_final_race_df=selected_race_df.withColumnRenamed("raceId","race_id")\
 
 # df=pre_final_race_df.compute()
 final_race_df=pre_final_race_df.drop('date','time')
-display(final_race_df)
+
 
 # COMMAND ----------
 
@@ -82,17 +95,20 @@ display(final_race_df)
 
 # COMMAND ----------
 
-final_race_df.write.mode("overwrite").partitionBy('race_year').parquet(f"{processed_path}/processed/races")
+# final_race_df.write.mode("overwrite").partitionBy('race_year').parquet(f"{processed_path}/processed/races")
 
 # COMMAND ----------
 
-# MAGIC %fs
-# MAGIC ls /mnt/formuladl28/processed/processed/races
+ final_race_df.write.mode("overwrite").format('parquet').partitionBy('race_year').saveAsTable('f1_processsed.races')
 
 # COMMAND ----------
 
+# MAGIC %sql
+# MAGIC SELECT * FROM f1_processsed.races
 
-display(spark.read.parquet("/mnt/formuladl28/processed/processed/races"))
+# COMMAND ----------
+
+dbutils.notebook.exit('success')
 
 # COMMAND ----------
 
@@ -100,3 +116,8 @@ display(spark.read.parquet("/mnt/formuladl28/processed/processed/races"))
 # MAGIC SET timezone = India;
 # MAGIC SELECT current_timezone();
 # MAGIC Select current_timestamp();
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT * FROM  fi_analyse_prod.races
